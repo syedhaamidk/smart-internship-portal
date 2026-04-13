@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Post Internship — Smart Internship Portal</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .form-card { max-width: 780px; }
+    .skill-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .skill-toggle {
+      padding: 5px 12px; border-radius: 20px; border: 1.5px solid var(--border);
+      background: var(--bg-card); cursor: pointer; font-size: .82rem; font-weight: 500;
+      color: var(--text-muted); transition: all var(--t-fast); user-select: none;
+    }
+    .skill-toggle.selected {
+      background: var(--accent-glow); border-color: var(--accent); color: var(--accent); font-weight: 600;
+    }
+    .step-indicator {
+      display: flex; gap: 0; margin-bottom: 32px;
+    }
+    .step {
+      flex: 1; text-align: center; padding: 10px;
+      border-bottom: 2px solid var(--border); font-size: .82rem;
+      color: var(--text-muted); font-weight: 500; transition: all var(--t-fast);
+    }
+    .step.active { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    .step.done   { border-color: var(--success); color: var(--success); }
+    .preview-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 20px; margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+
+    <div class="page-header">
+      <h2 id="pageTitle">Post New Internship</h2>
+      <p>Fill in the details below to attract top student talent</p>
+    </div>
+
+    <div class="form-card card">
+      <form id="postForm" onsubmit="submitForm(event)">
+
+        <!-- Basic Details -->
+        <h4 style="margin-bottom:16px;color:var(--text)">📋 Basic Information</h4>
+
+        <div class="form-group">
+          <label class="form-label">Internship Title *</label>
+          <input type="text" id="title" class="form-control" placeholder="e.g. Frontend Developer Intern" required maxlength="255">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Location</label>
+            <input type="text" id="location" class="form-control" placeholder="e.g. Bangalore or Remote">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Duration</label>
+            <select id="durationMonths" class="form-control">
+              <option value="1">1 Month</option>
+              <option value="2">2 Months</option>
+              <option value="3" selected>3 Months</option>
+              <option value="4">4 Months</option>
+              <option value="6">6 Months</option>
+              <option value="12">12 Months</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Minimum Stipend (₹/month)</label>
+            <input type="number" id="stipendMin" class="form-control" placeholder="15000" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Maximum Stipend (₹/month)</label>
+            <input type="number" id="stipendMax" class="form-control" placeholder="25000" min="0">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Application Deadline</label>
+            <input type="date" id="deadline" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Openings</label>
+            <input type="number" id="openings" class="form-control" value="1" min="1">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500">
+            <input type="checkbox" id="isRemote"> 🌐 Remote / Work from Home
+          </label>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Description -->
+        <h4 style="margin-bottom:16px;color:var(--text)">📝 Description</h4>
+        <div class="form-group">
+          <label class="form-label">Internship Description *</label>
+          <textarea id="description" class="form-control" rows="7"
+            placeholder="Describe the role, responsibilities, what the intern will learn, tech stack, team culture...&#10;&#10;Tip: Detailed descriptions get 3x more quality applications!" required></textarea>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Skills -->
+        <h4 style="margin-bottom:8px;color:var(--text)">🛠 Required Skills</h4>
+        <p class="text-muted text-sm" style="margin-bottom:12px">Select skills students need for this role (used for AI matching)</p>
+        <div class="skill-picker" id="skillPicker">
+          <div class="skeleton" style="width:80px;height:30px;border-radius:20px"></div>
+          <div class="skeleton" style="width:60px;height:30px;border-radius:20px"></div>
+          <div class="skeleton" style="width:90px;height:30px;border-radius:20px"></div>
+        </div>
+
+        <div id="selectedSkillsDisplay" style="margin-top:10px;font-size:.82rem;color:var(--text-muted)"></div>
+
+        <hr class="divider">
+
+        <!-- External Links -->
+        <h4 style="margin-bottom:8px;color:var(--text)">🔗 External Links (Optional)</h4>
+        <p class="text-muted text-sm" style="margin-bottom:12px">Add buttons to redirect students to external platforms</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">LinkedIn Job URL</label>
+            <input type="url" id="linkedinUrl" class="form-control" placeholder="https://linkedin.com/jobs/...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Internshala URL</label>
+            <input type="url" id="internshalaUrl" class="form-control" placeholder="https://internshala.com/...">
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="preview-card" id="previewCard" style="display:none">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-weight:600">
+            👁 Preview
+          </div>
+          <div id="previewContent"></div>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:24px">
+          <button type="button" class="btn btn-secondary" onclick="togglePreview()">👁 Preview</button>
+          <button type="submit" class="btn btn-primary" id="submitBtn">
+            🚀 Post Internship
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </main>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/ui.js"></script>
+<script>
+  if (!requireAuth(['company'])) throw new Error();
+  document.getElementById('sidebar').innerHTML = renderCompanySidebar('post');
+  initMobileMenu();
+
+  const editId = new URLSearchParams(location.search).get('id');
+  if (editId) {
+    document.getElementById('pageTitle').textContent = 'Edit Internship';
+    document.getElementById('submitBtn').textContent = '💾 Save Changes';
+    loadExisting();
+  }
+
+  let selectedSkills = new Set();
+
+  // Load skills
+  InternshipAPI.getSkills().then(res => {
+    document.getElementById('skillPicker').innerHTML = (res.data || []).map(s => `
+      <div class="skill-toggle" onclick="toggleSkill(${s.id}, '${s.name}', this)">${s.name}</div>
+    `).join('');
+  });
+
+  function toggleSkill(id, name, el) {
+    if (selectedSkills.has(id)) {
+      selectedSkills.delete(id);
+      el.classList.remove('selected');
+    } else {
+      selectedSkills.add(id);
+      el.classList.add('selected');
+    }
+    document.getElementById('selectedSkillsDisplay').textContent =
+      selectedSkills.size ? `${selectedSkills.size} skill(s) selected` : '';
+  }
+
+  async function loadExisting() {
+    try {
+      const res = await InternshipAPI.get(editId);
+      const j = res.data;
+      document.getElementById('title').value        = j.title || '';
+      document.getElementById('description').value  = j.description || '';
+      document.getElementById('location').value     = j.location || '';
+      document.getElementById('stipendMin').value   = j.stipend_min || '';
+      document.getElementById('stipendMax').value   = j.stipend_max || '';
+      document.getElementById('durationMonths').value = j.duration_months || 3;
+      document.getElementById('openings').value     = j.openings || 1;
+      document.getElementById('isRemote').checked   = !!j.is_remote;
+      if (j.deadline) document.getElementById('deadline').value = j.deadline.slice(0,10);
+
+      // Pre-select skills
+      if (j.skills) {
+        j.skills.forEach(s => selectedSkills.add(s.id));
+        // Will highlight once skillPicker loads
+        setTimeout(() => {
+          document.querySelectorAll('.skill-toggle').forEach(el => {
+            const skillName = el.textContent.trim();
+            const skill = (j.skills || []).find(s => s.name === skillName);
+            if (skill) { el.classList.add('selected'); }
+          });
+        }, 500);
+      }
+    } catch (err) {
+      showToast('Failed to load internship: ' + err.message, 'error');
+    }
+  }
+
+  function togglePreview() {
+    const pc = document.getElementById('previewCard');
+    const visible = pc.style.display !== 'none';
+    if (visible) { pc.style.display = 'none'; return; }
+
+    pc.style.display = 'block';
+    document.getElementById('previewContent').innerHTML = `
+      <div style="font-weight:600;font-size:1.1rem">${document.getElementById('title').value || 'Internship Title'}</div>
+      <div style="color:var(--text-muted);font-size:.85rem;margin:4px 0">
+        ${document.getElementById('location').value || 'Location'} ·
+        ${document.getElementById('durationMonths').value}mo ·
+        ₹${document.getElementById('stipendMin').value||0}–${document.getElementById('stipendMax').value||0}/mo
+      </div>
+      <div style="margin-top:10px;font-size:.88rem;white-space:pre-wrap">${document.getElementById('description').value}</div>`;
+  }
+
+  async function submitForm(e) {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span> Posting...';
+
+    const data = {
+      title:          document.getElementById('title').value,
+      description:    document.getElementById('description').value,
+      location:       document.getElementById('location').value,
+      isRemote:       document.getElementById('isRemote').checked,
+      stipendMin:     parseInt(document.getElementById('stipendMin').value) || 0,
+      stipendMax:     parseInt(document.getElementById('stipendMax').value) || 0,
+      durationMonths: parseInt(document.getElementById('durationMonths').value),
+      deadline:       document.getElementById('deadline').value || null,
+      openings:       parseInt(document.getElementById('openings').value) || 1,
+      skills:         Array.from(selectedSkills),
+    };
+
+    try {
+      if (editId) {
+        await InternshipAPI.update(editId, data);
+        showToast('Internship updated!', 'success');
+      } else {
+        await InternshipAPI.create(data);
+        showToast('Internship posted successfully! 🎉', 'success');
+        setTimeout(() => window.location.href = 'dashboard.html', 1200);
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = editId ? '💾 Save Changes' : '🚀 Post Internship';
+    }
+  }
+</script>
+</body>
+</html>

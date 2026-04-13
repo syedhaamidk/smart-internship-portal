@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Smart Internship Portal</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .welcome-banner {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 60%, #1a4fa0 100%);
+      border-radius: var(--radius-lg);
+      padding: 32px 36px;
+      color: #fff;
+      margin-bottom: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .welcome-banner::before {
+      content: '🎓';
+      position: absolute;
+      right: 36px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 5rem;
+      opacity: .15;
+    }
+    .welcome-banner h2 { color: #fff; margin-bottom: 4px; }
+    .welcome-banner p  { color: rgba(255,255,255,.7); margin: 0; }
+    .progress-section { margin-top: 16px; }
+    .progress-label { display: flex; justify-content: space-between; font-size: .82rem; margin-bottom: 4px; }
+    .progress-label span:first-child { color: rgba(255,255,255,.7); }
+    .profile-progress .progress-bar { background: rgba(255,255,255,.2); }
+    .profile-progress .progress-fill { background: #fff; }
+    .apps-timeline { display: flex; flex-direction: column; gap: 12px; }
+    .app-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 16px;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      transition: all var(--t-fast);
+    }
+    .app-item:hover { border-color: var(--accent-light); background: var(--accent-glow); }
+    .app-item-logo {
+      width: 40px; height: 40px; border-radius: var(--radius-sm);
+      background: var(--bg-card); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; font-weight: 700; color: var(--primary); flex-shrink: 0;
+    }
+    .app-item-info { flex: 1; min-width: 0; }
+    .app-item-title { font-weight: 600; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .app-item-meta  { font-size: .78rem; color: var(--text-muted); }
+    .recommended-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 20px;
+      background: var(--bg); border: 1px solid var(--border);
+      font-size: .82rem; color: var(--text); cursor: pointer;
+      transition: all var(--t-fast); margin: 3px;
+    }
+    .recommended-chip:hover { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
+    .match-pill {
+      background: var(--success); color: #fff;
+      font-size: .7rem; padding: 1px 6px; border-radius: 20px; font-weight: 700;
+    }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <main class="main-content">
+    <!-- Mobile header -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px" class="mobile-header">
+      <button id="menu-toggle" class="btn-icon" style="font-size:1.4rem;display:none">☰</button>
+    </div>
+
+    <!-- Welcome Banner -->
+    <div class="welcome-banner" id="welcomeBanner">
+      <h2 id="welcomeText">Good morning! 👋</h2>
+      <p id="welcomeSub">Loading your dashboard...</p>
+      <div class="progress-section profile-progress">
+        <div class="progress-label">
+          <span>Profile Completion</span>
+          <span id="profilePct">—</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="profileBar" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card"><div class="stat-icon">📩</div><div><div class="stat-value skeleton" style="width:40px;height:32px"></div><div class="stat-label">Total Applications</div></div></div>
+      <div class="stat-card green"><div class="stat-icon">⭐</div><div><div class="stat-value skeleton" style="width:40px;height:32px"></div><div class="stat-label">Shortlisted</div></div></div>
+      <div class="stat-card orange"><div class="stat-icon">🔖</div><div><div class="stat-value skeleton" style="width:40px;height:32px"></div><div class="stat-label">Saved Jobs</div></div></div>
+      <div class="stat-card red"><div class="stat-icon">🔔</div><div><div class="stat-value skeleton" style="width:40px;height:32px"></div><div class="stat-label">Notifications</div></div></div>
+    </div>
+
+    <div class="two-col">
+      <!-- Recent Applications -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Recent Applications</h3>
+          <a href="applications.html" class="btn btn-secondary btn-sm">View All</a>
+        </div>
+        <div class="apps-timeline" id="recentApps">
+          <div class="skeleton" style="height:60px;border-radius:8px"></div>
+          <div class="skeleton" style="height:60px;border-radius:8px"></div>
+          <div class="skeleton" style="height:60px;border-radius:8px"></div>
+        </div>
+      </div>
+
+      <!-- Recommended Jobs -->
+      <div class="card">
+        <div class="card-header">
+          <h3>🤖 Recommended for You</h3>
+          <a href="internships.html?tab=recommended" class="btn btn-secondary btn-sm">See All</a>
+        </div>
+        <div id="recommendedJobs" style="line-height:2.2">
+          <div class="skeleton" style="height:16px;width:80%;border-radius:20px;margin-bottom:8px"></div>
+          <div class="skeleton" style="height:16px;width:60%;border-radius:20px;margin-bottom:8px"></div>
+          <div class="skeleton" style="height:16px;width:70%;border-radius:20px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="card mt-4" id="notifCard" style="margin-top:20px">
+      <div class="card-header">
+        <h3>🔔 Notifications</h3>
+        <span id="notifCount" class="badge badge-applied"></span>
+      </div>
+      <div id="notifList">
+        <div class="skeleton" style="height:44px;border-radius:8px;margin-bottom:8px"></div>
+        <div class="skeleton" style="height:44px;border-radius:8px"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/ui.js"></script>
+<script>
+  if (!requireAuth(['student'])) throw new Error('Auth redirect');
+
+  // Render sidebar
+  document.getElementById('sidebar').innerHTML = renderStudentSidebar('dashboard');
+  initMobileMenu();
+
+  // Greeting
+  const hr = new Date().getHours();
+  const greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+
+  async function loadDashboard() {
+    try {
+      const [dashRes, profileRes, notifRes, recRes] = await Promise.all([
+        StudentAPI.getDashboard(),
+        StudentAPI.getProfile(),
+        StudentAPI.getNotifications(),
+        InternshipAPI.getRecommended().catch(() => ({ data: [] }))
+      ]);
+
+      const d  = dashRes.data;
+      const p  = profileRes.data;
+      const name = p.first_name || localStorage.getItem('email').split('@')[0];
+
+      // Welcome banner
+      document.getElementById('welcomeText').textContent = `${greet}, ${name}! 👋`;
+      document.getElementById('welcomeSub').textContent =
+        d.totalApplications > 0
+          ? `You have ${d.totalApplications} application(s). Keep going!`
+          : 'Complete your profile and start applying for internships.';
+
+      // Profile completion score
+      const fields  = ['first_name','last_name','phone','college','degree','branch','graduation_year','cgpa','bio','resume_url'];
+      const filled  = fields.filter(f => p[f]).length;
+      const pct     = Math.round((filled / fields.length) * 100);
+      document.getElementById('profilePct').textContent = `${pct}%`;
+      document.getElementById('profileBar').style.width = `${pct}%`;
+
+      // Stats
+      const shortlisted = (d.applicationsByStatus.find(s => s.status === 'shortlisted') || {}).count || 0;
+      document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-icon">📩</div>
+          <div><div class="stat-value">${d.totalApplications}</div><div class="stat-label">Total Applications</div></div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">⭐</div>
+          <div><div class="stat-value">${shortlisted}</div><div class="stat-label">Shortlisted</div></div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon">🔖</div>
+          <div><div class="stat-value">${d.savedJobs}</div><div class="stat-label">Saved Jobs</div></div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon">🔔</div>
+          <div><div class="stat-value">${d.unreadNotifications}</div><div class="stat-label">Notifications</div></div>
+        </div>`;
+
+      // Recent apps
+      const appsEl = document.getElementById('recentApps');
+      if (!d.recentApplications.length) {
+        appsEl.innerHTML = `<div class="empty-state"><div class="empty-icon">📭</div><p>No applications yet.<br><a href="internships.html">Browse internships</a></p></div>`;
+      } else {
+        appsEl.innerHTML = d.recentApplications.map(a => `
+          <div class="app-item">
+            <div class="app-item-logo">${(a.company_name||'?')[0]}</div>
+            <div class="app-item-info">
+              <div class="app-item-title">${a.title}</div>
+              <div class="app-item-meta">${a.company_name || 'External'} · ${timeAgo(a.applied_at)}</div>
+            </div>
+            ${statusBadge(a.status)}
+          </div>`).join('');
+      }
+
+      // Recommended
+      const recEl = document.getElementById('recommendedJobs');
+      if (!recRes.data || !recRes.data.length) {
+        recEl.innerHTML = `<p class="text-muted text-sm">Add skills to your profile to get personalised recommendations.</p><a href="profile.html" class="btn btn-outline btn-sm" style="margin-top:10px">Update Skills</a>`;
+      } else {
+        recEl.innerHTML = recRes.data.map(j => `
+          <a href="internship-detail.html?id=${j.id}" class="recommended-chip">
+            ${j.title}
+            <span class="match-pill">${j.matched_skills} skill match</span>
+          </a>`).join('');
+      }
+
+      // Notifications
+      const notifs = notifRes.data || [];
+      const unread = notifs.filter(n => !n.is_read);
+      if (unread.length) document.getElementById('notifCount').textContent = `${unread.length} new`;
+      const notifEl = document.getElementById('notifList');
+      if (!notifs.length) {
+        notifEl.innerHTML = `<p class="text-muted text-sm">No notifications yet.</p>`;
+      } else {
+        notifEl.innerHTML = notifs.slice(0, 5).map(n => `
+          <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-light)" id="notif-${n.id}">
+            <span style="font-size:1.3rem">${n.type === 'status_update' ? '📬' : n.type === 'new_match' ? '✨' : '🔔'}</span>
+            <div style="flex:1">
+              <div style="font-size:.88rem;color:var(--text);${!n.is_read ? 'font-weight:600' : ''}">${n.message}</div>
+              <div style="font-size:.75rem;color:var(--text-muted);margin-top:2px">${timeAgo(n.created_at)}</div>
+            </div>
+            ${!n.is_read ? `<button onclick="markRead(${n.id})" class="btn btn-secondary btn-sm">Mark Read</button>` : ''}
+          </div>`).join('');
+      }
+
+    } catch (err) {
+      showToast('Failed to load dashboard: ' + err.message, 'error');
+    }
+  }
+
+  async function markRead(id) {
+    await StudentAPI.markNotifRead(id);
+    const el = document.getElementById(`notif-${id}`);
+    if (el) el.style.opacity = '.5';
+    showToast('Marked as read', 'success');
+  }
+
+  loadDashboard();
+  initChatbot();
+</script>
+</body>
+</html>

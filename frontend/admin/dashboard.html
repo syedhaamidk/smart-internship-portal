@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — Smart Internship Portal</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .admin-header {
+      background: linear-gradient(135deg, #1e293b, #334155);
+      border-radius: var(--radius-lg); padding: 24px 32px;
+      color: #fff; margin-bottom: 28px;
+    }
+    .admin-header h2 { color: #fff; margin-bottom: 4px; }
+    .admin-header p  { color: rgba(255,255,255,.6); margin: 0; }
+    .skill-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .skill-bar-name { width: 110px; font-size: .8rem; color: var(--text-muted); flex-shrink: 0; }
+    .skill-bar { flex: 1; background: var(--border); height: 18px; border-radius: 4px; overflow: hidden; }
+    .skill-bar-fill { height: 100%; background: var(--accent); border-radius: 4px; display: flex; align-items: center; padding-left: 6px; color: #fff; font-size: .68rem; font-weight: 700; }
+    .company-row { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 8px; border: 1px solid var(--border); }
+    .company-rank { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 700; flex-shrink: 0; }
+    .trend-chart { display: flex; align-items: flex-end; gap: 8px; height: 80px; padding: 8px 0; }
+    .trend-bar { flex: 1; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 4px; position: relative; cursor: pointer; transition: opacity var(--t-fast); }
+    .trend-bar:hover { opacity: .8; }
+    .trend-bar::after { content: attr(data-val); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-size: .65rem; color: var(--text-muted); white-space: nowrap; padding-bottom: 2px; }
+    .trend-labels { display: flex; gap: 8px; }
+    .trend-label { flex: 1; text-align: center; font-size: .65rem; color: var(--text-muted); }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+    @media (max-width: 900px) { .two-col, .three-col { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+
+    <div class="admin-header">
+      <h2>🛡 Admin Control Panel</h2>
+      <p>Platform-wide analytics and management tools</p>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid" id="statsGrid">
+      ${[1,2,3,4,5,6].map(() => `<div class="stat-card"><div class="stat-icon"><div class="skeleton" style="width:36px;height:36px;border-radius:8px"></div></div><div><div class="skeleton" style="width:50px;height:28px;margin-bottom:4px"></div><div class="skeleton" style="width:90px;height:12px"></div></div></div>`).join('')}
+    </div>
+
+    <!-- Charts Row -->
+    <div class="two-col" style="margin-bottom:20px">
+
+      <!-- Applications Trend -->
+      <div class="card">
+        <div class="card-header"><h3>📈 Applications (Last 7 Days)</h3></div>
+        <div id="trendChart" class="trend-chart">
+          ${[1,2,3,4,5,6,7].map(() => `<div class="skeleton" style="flex:1;min-height:20px;border-radius:4px"></div>`).join('')}
+        </div>
+        <div class="trend-labels" id="trendLabels"></div>
+      </div>
+
+      <!-- Skills in Demand -->
+      <div class="card">
+        <div class="card-header"><h3>🔥 Top Skills in Demand</h3></div>
+        <div id="skillsBars">
+          <div class="skeleton" style="height:120px;border-radius:8px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col" style="margin-bottom:20px">
+      <!-- Top Companies -->
+      <div class="card">
+        <div class="card-header">
+          <h3>🏢 Top Companies by Applications</h3>
+          <a href="users.html" class="btn btn-secondary btn-sm">Manage</a>
+        </div>
+        <div id="topCompanies">
+          <div class="skeleton" style="height:120px;border-radius:8px"></div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card">
+        <div class="card-header"><h3>⚡ Quick Actions</h3></div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <a href="users.html?role=student"  class="btn btn-secondary btn-full">👨‍🎓 Manage Students</a>
+          <a href="users.html?role=company"  class="btn btn-secondary btn-full">🏢 Manage Companies</a>
+          <a href="internships.html?status=pending_approval" class="btn btn-outline btn-full">⏳ Pending Approvals</a>
+          <a href="internships.html" class="btn btn-secondary btn-full">📋 All Internships</a>
+        </div>
+        <hr class="divider">
+        <div style="font-size:.82rem;color:var(--text-muted)">
+          <div>🔐 Admin privileges active</div>
+          <div style="margin-top:4px">📧 <a href="mailto:admin@portal.com">admin@portal.com</a></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pending Internships -->
+    <div class="card">
+      <div class="card-header">
+        <h3>⏳ Pending Internship Approvals</h3>
+        <a href="internships.html" class="btn btn-secondary btn-sm">View All</a>
+      </div>
+      <div id="pendingInternships">
+        <div class="skeleton" style="height:80px;border-radius:8px;margin-bottom:8px"></div>
+        <div class="skeleton" style="height:80px;border-radius:8px"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/ui.js"></script>
+<script>
+  if (!requireAuth(['admin'])) throw new Error();
+  document.getElementById('sidebar').innerHTML = renderAdminSidebar('dashboard');
+  initMobileMenu();
+
+  async function loadDashboard() {
+    try {
+      const res = await AdminAPI.getDashboard();
+      const d = res.data;
+
+      // Stats
+      document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div><div class="stat-value">${d.users.total}</div><div class="stat-label">Total Users</div></div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">🎓</div>
+          <div><div class="stat-value">${d.users.students}</div><div class="stat-label">Students</div></div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon">🏢</div>
+          <div><div class="stat-value">${d.users.companies}</div><div class="stat-label">Companies</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📋</div>
+          <div><div class="stat-value">${d.internships.total}</div><div class="stat-label">Total Internships</div></div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">✅</div>
+          <div><div class="stat-value">${d.internships.active}</div><div class="stat-label">Active Listings</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📩</div>
+          <div><div class="stat-value">${d.applications.total}</div><div class="stat-label">Applications</div></div>
+        </div>`;
+
+      // Trend chart
+      const trend = d.applicationTrend || [];
+      const maxTrend = Math.max(...trend.map(t => t.applications), 1);
+      if (trend.length) {
+        document.getElementById('trendChart').innerHTML = trend.map(t => `
+          <div class="trend-bar"
+            style="height:${Math.max((t.applications/maxTrend)*72,4)}px"
+            data-val="${t.applications}"></div>`).join('');
+        document.getElementById('trendLabels').innerHTML = trend.map(t =>
+          `<div class="trend-label">${new Date(t.date).toLocaleDateString('en-IN',{weekday:'short'})}</div>`).join('');
+      } else {
+        document.getElementById('trendChart').innerHTML = `<div style="color:var(--text-muted);font-size:.85rem;align-self:center">No data yet</div>`;
+      }
+
+      // Skills bars
+      const skills = d.topSkillsInDemand || [];
+      const maxSkill = Math.max(...skills.map(s => s.demand_count), 1);
+      document.getElementById('skillsBars').innerHTML = skills.map(s => `
+        <div class="skill-bar-row">
+          <div class="skill-bar-name">${s.name}</div>
+          <div class="skill-bar">
+            <div class="skill-bar-fill" style="width:${(s.demand_count/maxSkill)*100}%">${s.demand_count}</div>
+          </div>
+        </div>`).join('') || '<p class="text-muted text-sm">No skill data yet</p>';
+
+      // Top companies
+      document.getElementById('topCompanies').innerHTML = (d.topCompanies || []).map((c,i) => `
+        <div class="company-row">
+          <div class="company-rank">${i+1}</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:.9rem">${c.company_name}</div>
+            <div style="font-size:.75rem;color:var(--text-muted)">${c.industry || 'N/A'} · ${c.total_internships} posting(s)</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:'Sora',sans-serif;font-weight:700">${c.total_applications}</div>
+            <div style="font-size:.72rem;color:var(--text-muted)">applications</div>
+          </div>
+        </div>`).join('') || '<p class="text-muted text-sm">No companies yet</p>';
+
+      // Pending internships
+      const pendingRes = await AdminAPI.getInternships({ status: 'pending_approval', limit: 5 });
+      const pending = pendingRes.data || [];
+      document.getElementById('pendingInternships').innerHTML = pending.length
+        ? pending.map(j => `
+          <div style="display:flex;align-items:center;gap:14px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px">
+            <div style="flex:1">
+              <div style="font-weight:600">${j.title}</div>
+              <div style="font-size:.8rem;color:var(--text-muted)">${j.company_name} · ${j.location || 'N/A'}</div>
+            </div>
+            <button onclick="approveJob(${j.id})" class="btn btn-primary btn-sm">✅ Approve</button>
+            <button onclick="rejectJob(${j.id})"  class="btn btn-danger btn-sm">❌ Reject</button>
+          </div>`).join('')
+        : '<div class="empty-state" style="padding:30px"><div class="empty-icon">✅</div><p>No pending approvals</p></div>';
+
+    } catch (err) {
+      showToast('Failed to load dashboard: ' + err.message, 'error');
+    }
+  }
+
+  async function approveJob(id) {
+    await AdminAPI.approveInternship(id);
+    showToast('Internship approved!', 'success');
+    loadDashboard();
+  }
+  async function rejectJob(id) {
+    await AdminAPI.rejectInternship(id);
+    showToast('Internship rejected', 'warning');
+    loadDashboard();
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>

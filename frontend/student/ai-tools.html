@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Tools — Smart Internship Portal</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .ai-hero {
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%);
+      border-radius: var(--radius-lg); padding: 32px 36px;
+      color: #fff; margin-bottom: 28px; position: relative; overflow: hidden;
+    }
+    .ai-hero::before {
+      content: '🤖'; position: absolute; right: 32px; top: 50%;
+      transform: translateY(-50%); font-size: 6rem; opacity: .12;
+    }
+    .ai-hero h2 { color: #fff; }
+    .ai-hero p  { color: rgba(255,255,255,.7); }
+    .ai-badge-lg {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,.15); color: #fff;
+      padding: 4px 12px; border-radius: 20px;
+      font-size: .8rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .5px;
+      margin-bottom: 12px;
+    }
+    .tool-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px;
+    }
+    .tool-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .tool-icon {
+      width: 48px; height: 48px; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem;
+    }
+    .score-display {
+      display: flex; align-items: center; gap: 24px;
+      padding: 20px; background: var(--bg); border-radius: var(--radius-sm);
+      margin-bottom: 20px;
+    }
+    .big-score { font-family: 'Sora', sans-serif; font-size: 3rem; font-weight: 800; line-height: 1; }
+    .score-grade { font-size: .85rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+    .skill-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .skill-tag { padding: 4px 10px; border-radius: 20px; font-size: .78rem; font-weight: 600; }
+    .skill-found   { background: #d1fae5; color: #065f46; }
+    .skill-missing { background: #fee2e2; color: #991b1b; }
+    .improvement-list { list-style: none; }
+    .improvement-list li {
+      padding: 10px 12px; border-radius: var(--radius-sm);
+      background: var(--bg); margin-bottom: 8px; font-size: .88rem;
+      color: var(--text); display: flex; gap: 8px; align-items: flex-start;
+    }
+    .improvement-list li::before { content: '→'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+    .recommend-card {
+      display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+      background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 8px;
+      border: 1px solid var(--border); transition: all var(--t-fast); cursor: pointer;
+    }
+    .recommend-card:hover { border-color: var(--accent-light); background: var(--accent-glow); }
+    .match-score-bar { margin-bottom: 6px; }
+    .match-score-label { display: flex; justify-content: space-between; font-size: .8rem; margin-bottom: 3px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+
+    <!-- Hero -->
+    <div class="ai-hero">
+      <div class="ai-badge-lg">✨ AI Powered</div>
+      <h2>AI Career Tools</h2>
+      <p>Powered by Claude — analyze your resume, find the best matches, and get personalized career guidance.</p>
+    </div>
+
+    <div class="grid-2">
+
+      <!-- ── Resume Analyzer ───────────────────────── -->
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon" style="background:#ede9fe">📄</div>
+          <div>
+            <h3>Resume Analyzer</h3>
+            <p style="font-size:.85rem;margin:0">Get AI-powered feedback on your resume</p>
+          </div>
+          <span class="ai-badge" style="margin-left:auto">AI</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Paste your resume text below</label>
+          <textarea id="resumeText" class="form-control" rows="8"
+            placeholder="Paste your full resume here (copy-paste from Word/PDF)...&#10;&#10;Example:&#10;ALICE SHARMA&#10;B.Tech CS, IIT Bombay | CGPA: 8.9&#10;Skills: Python, React, Node.js, MySQL&#10;Experience: Full-stack intern at XYZ..."></textarea>
+        </div>
+
+        <button class="btn btn-primary btn-full" onclick="analyzeResume()" id="analyzeBtn">
+          🤖 Analyze My Resume
+        </button>
+
+        <!-- Results -->
+        <div id="analyzeResults" class="hidden" style="margin-top:20px">
+          <hr class="divider">
+
+          <div class="score-display">
+            <div>
+              <div class="big-score" id="overallScore">—</div>
+              <div class="text-muted text-sm" style="margin-top:4px">Overall Score</div>
+              <div id="scoreGrade" class="score-grade" style="margin-top:6px"></div>
+            </div>
+            <div style="flex:1">
+              <div class="match-score-bar">
+                <div class="match-score-label"><span>ATS Keyword Score</span><span id="kw-score">—</span></div>
+                <div class="progress-bar"><div class="progress-fill" id="kw-bar" style="width:0%"></div></div>
+              </div>
+              <div style="margin-top:12px;font-size:.85rem;color:var(--text-muted)" id="aiSummary"></div>
+            </div>
+          </div>
+
+          <div style="margin-bottom:16px">
+            <div class="form-label">✅ Skills Found</div>
+            <div class="skill-tags" id="foundSkills"></div>
+          </div>
+          <div style="margin-bottom:16px">
+            <div class="form-label">❌ Skills to Add</div>
+            <div class="skill-tags" id="missingSkills"></div>
+          </div>
+          <div>
+            <div class="form-label">💡 Improvements</div>
+            <ul class="improvement-list" id="improvements"></ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Job Recommendations ────────────────────── -->
+      <div>
+        <div class="tool-card" style="margin-bottom:20px">
+          <div class="tool-header">
+            <div class="tool-icon" style="background:#dbeafe">🎯</div>
+            <div>
+              <h3>Career Recommender</h3>
+              <p style="font-size:.85rem;margin:0">AI-suggested roles based on your profile</p>
+            </div>
+            <span class="ai-badge" style="margin-left:auto">AI</span>
+          </div>
+
+          <button class="btn btn-outline btn-full" onclick="getRecommendations()" id="recBtn">
+            ✨ Get Personalized Recommendations
+          </button>
+
+          <div id="recResults" class="hidden" style="margin-top:16px">
+            <div class="form-label" style="margin-bottom:8px">🎯 Recommended Roles</div>
+            <div id="recRoles"></div>
+
+            <div class="form-label" style="margin-top:16px;margin-bottom:8px">📚 Skills to Learn</div>
+            <div class="skill-tags" id="skillsToLearn"></div>
+
+            <div class="form-label" style="margin-top:16px;margin-bottom:8px">🛤 Career Paths</div>
+            <div id="careerPaths" style="font-size:.88rem;color:var(--text-muted)"></div>
+
+            <div style="margin-top:16px;padding:14px;background:var(--accent-glow);border-radius:var(--radius-sm);border-left:4px solid var(--accent)">
+              <div style="font-size:.8rem;font-weight:600;color:var(--accent);margin-bottom:4px">💡 AI TIP</div>
+              <div style="font-size:.88rem;color:var(--text)" id="aiTip"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Skill Match Checker -->
+        <div class="tool-card">
+          <div class="tool-header">
+            <div class="tool-icon" style="background:#dcfce7">🔗</div>
+            <div>
+              <h3>Job Match Checker</h3>
+              <p style="font-size:.85rem;margin:0">Check how well you match a specific job</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Internship ID</label>
+            <input type="number" id="matchJobId" class="form-control" placeholder="Enter internship ID from job listing">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Your Resume Text</label>
+            <textarea id="matchResumeText" class="form-control" rows="4" placeholder="Paste resume text here..."></textarea>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="checkMatch()" id="matchBtn">
+            🔍 Check My Match
+          </button>
+
+          <div id="matchResults" class="hidden" style="margin-top:16px">
+            <div class="score-display">
+              <div>
+                <div class="big-score" id="matchScore">—</div>
+                <div class="text-muted text-sm">Match Score</div>
+              </div>
+              <div style="flex:1">
+                <div class="match-score-label"><span>✅ Matched Skills</span></div>
+                <div class="skill-tags" id="matchedSkills" style="margin-bottom:10px"></div>
+                <div class="match-score-label"><span>❌ Missing Skills</span></div>
+                <div class="skill-tags" id="missMatchSkills"></div>
+              </div>
+            </div>
+            <div style="padding:12px;background:var(--bg);border-radius:var(--radius-sm);font-size:.88rem;color:var(--text)" id="matchRec"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/ui.js"></script>
+<script>
+  if (!requireAuth(['student'])) throw new Error();
+  document.getElementById('sidebar').innerHTML = renderStudentSidebar('ai');
+  initMobileMenu();
+
+  async function analyzeResume() {
+    const text = document.getElementById('resumeText').value.trim();
+    if (text.length < 50) return showToast('Please paste at least 50 characters of resume text', 'warning');
+
+    const btn = document.getElementById('analyzeBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span> Analyzing with AI...';
+
+    try {
+      const res = await AIAPI.analyzeResume(text);
+      const d = res.data;
+
+      document.getElementById('analyzeResults').classList.remove('hidden');
+      document.getElementById('overallScore').textContent = d.overallScore || '—';
+
+      // Grade
+      const score = d.overallScore || 0;
+      const grade = score >= 80 ? {label:'Excellent 🎉',bg:'#d1fae5',color:'#065f46'}
+                  : score >= 60 ? {label:'Good 👍',bg:'#dbeafe',color:'#1e40af'}
+                  : score >= 40 ? {label:'Needs Work 📝',bg:'#fef3c7',color:'#92400e'}
+                  : {label:'Needs Improvement ⚠️',bg:'#fee2e2',color:'#991b1b'};
+      const gradeEl = document.getElementById('scoreGrade');
+      gradeEl.textContent = grade.label;
+      gradeEl.style.background = grade.bg;
+      gradeEl.style.color = grade.color;
+
+      // KW score
+      const kw = d.keywordScore || 0;
+      document.getElementById('kw-score').textContent = kw + '/100';
+      document.getElementById('kw-bar').style.width = kw + '%';
+      document.getElementById('kw-bar').className = `progress-fill ${kw >= 70 ? 'green' : kw >= 40 ? '' : 'orange'}`;
+
+      document.getElementById('aiSummary').textContent = d.summary || '';
+
+      // Skills
+      document.getElementById('foundSkills').innerHTML = (d.extractedSkills||[]).map(s =>
+        `<span class="skill-tag skill-found">✓ ${s}</span>`).join('');
+      document.getElementById('missingSkills').innerHTML = (d.missingSkills||[]).map(s =>
+        `<span class="skill-tag skill-missing">+ ${s}</span>`).join('');
+
+      // Improvements
+      document.getElementById('improvements').innerHTML = (d.improvements||[]).map(i =>
+        `<li>${i}</li>`).join('');
+
+      // Scroll into view
+      document.getElementById('analyzeResults').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    } catch (err) {
+      showToast('AI analysis failed: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '🤖 Analyze My Resume';
+    }
+  }
+
+  async function getRecommendations() {
+    const btn = document.getElementById('recBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span> Generating...';
+
+    try {
+      const profileRes = await StudentAPI.getProfile();
+      const profile = profileRes.data;
+      const skills = (profile.skills || []).map(s => s.name);
+      const res = await AIAPI.recommendJobs({ skills, cgpa: profile.cgpa, interests: profile.bio });
+      const d = res.data;
+
+      document.getElementById('recResults').classList.remove('hidden');
+      document.getElementById('recRoles').innerHTML = (d.recommendedRoles||[]).map(r =>
+        `<div class="recommend-card"><span>🎯</span><span style="font-weight:500;font-size:.9rem">${r}</span></div>`).join('');
+      document.getElementById('skillsToLearn').innerHTML = (d.skillsToLearn||[]).map(s =>
+        `<span class="skill-tag" style="background:#ede9fe;color:#4c1d95">📚 ${s}</span>`).join('');
+      document.getElementById('careerPaths').innerHTML = (d.careerPaths||[]).map((p,i) =>
+        `${i+1}. ${p}`).join('<br>');
+      document.getElementById('aiTip').textContent = d.tips || '';
+    } catch (err) {
+      showToast('Failed to get recommendations: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '✨ Get Personalized Recommendations';
+    }
+  }
+
+  async function checkMatch() {
+    const jobId = document.getElementById('matchJobId').value;
+    const text  = document.getElementById('matchResumeText').value.trim();
+    if (!jobId) return showToast('Enter an internship ID', 'warning');
+    if (text.length < 30) return showToast('Paste more resume text', 'warning');
+
+    const btn = document.getElementById('matchBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading-spinner"></span> Calculating match...';
+
+    try {
+      const res = await AIAPI.matchScore(text, parseInt(jobId));
+      const d = res.data;
+      document.getElementById('matchResults').classList.remove('hidden');
+      document.getElementById('matchScore').textContent = (d.matchScore || 0) + '%';
+      document.getElementById('matchScore').style.color = d.matchScore >= 70 ? 'var(--success)' : d.matchScore >= 40 ? 'var(--warning)' : 'var(--danger)';
+      document.getElementById('matchedSkills').innerHTML = (d.matchedSkills||[]).map(s => `<span class="skill-tag skill-found">✓ ${s}</span>`).join('');
+      document.getElementById('missMatchSkills').innerHTML = (d.missingSkills||[]).map(s => `<span class="skill-tag skill-missing">+ ${s}</span>`).join('');
+      document.getElementById('matchRec').textContent = d.recommendation || '';
+    } catch (err) {
+      showToast('Match check failed: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '🔍 Check My Match';
+    }
+  }
+
+  initChatbot();
+</script>
+</body>
+</html>

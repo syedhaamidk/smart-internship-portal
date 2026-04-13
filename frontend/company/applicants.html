@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Applicants — Smart Internship Portal</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .applicant-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; margin-bottom: 12px;
+      display: flex; align-items: flex-start; gap: 16px;
+      transition: all var(--t-med); box-shadow: var(--shadow);
+    }
+    .applicant-card:hover { border-color: var(--accent-light); box-shadow: var(--shadow-hover); }
+    .applicant-avatar-lg {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: var(--accent-glow); color: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1.1rem; flex-shrink: 0;
+    }
+    .applicant-info { flex: 1; min-width: 0; }
+    .applicant-name { font-size: 1.05rem; font-weight: 700; }
+    .applicant-meta { font-size: .82rem; color: var(--text-muted); margin-top: 2px; margin-bottom: 8px; }
+    .status-select {
+      padding: 5px 10px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      font-size: .82rem; font-family: 'DM Sans', sans-serif;
+      background: var(--bg-card); color: var(--text); cursor: pointer; outline: none;
+    }
+    .status-select:focus { border-color: var(--accent); }
+    .job-filter-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+    .stats-mini { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+    .stat-mini-item { flex: 1; min-width: 100px; text-align: center; padding: 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow); }
+    .stat-mini-val   { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 1.5rem; }
+    .stat-mini-label { font-size: .72rem; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+
+    <div class="page-header">
+      <h2>Applicant Management</h2>
+      <p>Review and update the status of candidates who applied to your internships</p>
+    </div>
+
+    <!-- Stats mini -->
+    <div class="stats-mini" id="statsMini"></div>
+
+    <!-- Filters -->
+    <div class="job-filter-row">
+      <select class="filter-select" id="filterJob" onchange="loadApplicants()">
+        <option value="">📋 All Internships</option>
+      </select>
+      <select class="filter-select" id="filterStatus" onchange="loadApplicants()">
+        <option value="">🔍 All Statuses</option>
+        <option value="applied">Applied</option>
+        <option value="shortlisted">Shortlisted</option>
+        <option value="hired">Hired</option>
+        <option value="rejected">Rejected</option>
+      </select>
+      <div style="flex:1;text-align:right;font-size:.85rem;color:var(--text-muted)" id="totalCount"></div>
+    </div>
+
+    <div id="applicantsList">
+      ${[1,2,3,4].map(() => `<div class="card" style="height:100px;margin-bottom:12px"><div class="skeleton" style="height:100%;border-radius:8px"></div></div>`).join('')}
+    </div>
+
+    <div class="empty-state hidden" id="emptyState">
+      <div class="empty-icon">👥</div>
+      <h4>No applicants yet</h4>
+      <p>Applicants will appear here once students apply for your internships</p>
+    </div>
+
+  </main>
+</div>
+
+<!-- Cover Letter Modal -->
+<div class="modal-overlay hidden" id="clModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>📄 Cover Letter</h3>
+      <button class="modal-close" onclick="document.getElementById('clModal').classList.add('hidden')">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="clText" style="white-space:pre-wrap;font-size:.9rem;color:var(--text);line-height:1.7"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('clModal').classList.add('hidden')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/ui.js"></script>
+<script>
+  if (!requireAuth(['company'])) throw new Error();
+  document.getElementById('sidebar').innerHTML = renderCompanySidebar('applicants');
+  initMobileMenu();
+
+  const urlParams = new URLSearchParams(location.search);
+  const preFilterJob = urlParams.get('internshipId');
+
+  // Load company internships for filter dropdown
+  CompanyAPI.getInternships().then(res => {
+    const select = document.getElementById('filterJob');
+    (res.data || []).forEach(j => {
+      const opt = document.createElement('option');
+      opt.value = j.id;
+      opt.textContent = j.title;
+      if (preFilterJob && String(j.id) === preFilterJob) opt.selected = true;
+      select.appendChild(opt);
+    });
+    loadApplicants();
+  });
+
+  async function loadApplicants() {
+    const params = {};
+    const jobFilter    = document.getElementById('filterJob').value;
+    const statusFilter = document.getElementById('filterStatus').value;
+    if (jobFilter)    params.internshipId = jobFilter;
+    if (statusFilter) params.status       = statusFilter;
+
+    try {
+      const res = await ApplicationAPI.getForCompany(params);
+      const apps   = res.data || [];
+      const stats  = res.stats || [];
+
+      document.getElementById('totalCount').textContent = `${apps.length} application(s)`;
+
+      // Stats mini
+      const totalApps     = stats.reduce((s,j) => s + (j.total_applications||0), 0);
+      const totalShort    = stats.reduce((s,j) => s + (j.shortlisted||0), 0);
+      const totalHired    = stats.reduce((s,j) => s + (j.hired||0), 0);
+      const avgCgpa       = stats.length ? (stats.reduce((s,j) => s + parseFloat(j.avg_applicant_cgpa||0), 0) / stats.length).toFixed(2) : '—';
+      document.getElementById('statsMini').innerHTML = `
+        <div class="stat-mini-item"><div class="stat-mini-val">${totalApps}</div><div class="stat-mini-label">Total Applied</div></div>
+        <div class="stat-mini-item" style="border-top:3px solid var(--warning)"><div class="stat-mini-val" style="color:var(--warning)">${totalShort}</div><div class="stat-mini-label">Shortlisted</div></div>
+        <div class="stat-mini-item" style="border-top:3px solid var(--success)"><div class="stat-mini-val" style="color:var(--success)">${totalHired}</div><div class="stat-mini-label">Hired</div></div>
+        <div class="stat-mini-item"><div class="stat-mini-val">${avgCgpa}</div><div class="stat-mini-label">Avg CGPA</div></div>`;
+
+      if (!apps.length) {
+        document.getElementById('applicantsList').innerHTML = '';
+        document.getElementById('emptyState').classList.remove('hidden');
+        return;
+      }
+      document.getElementById('emptyState').classList.add('hidden');
+
+      document.getElementById('applicantsList').innerHTML = apps.map(a => `
+        <div class="applicant-card" id="app-${a.application_id}">
+          <div class="applicant-avatar-lg">${getInitials(a.student_name)}</div>
+          <div class="applicant-info">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+              <div>
+                <div class="applicant-name">${a.student_name}</div>
+                <div class="applicant-meta">
+                  📧 ${a.student_email} ·
+                  🏫 ${a.college || 'N/A'} ·
+                  📊 CGPA: ${a.cgpa || 'N/A'} ·
+                  Applied ${timeAgo(a.applied_at)}
+                </div>
+                <div style="font-size:.85rem;color:var(--text);font-weight:500">📋 ${a.internship_title}</div>
+              </div>
+              ${statusBadge(a.status)}
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center">
+              ${a.resume_url ? `<a href="${a.resume_url}" target="_blank" class="btn btn-secondary btn-sm">📄 Resume</a>` : '<span class="text-muted text-sm">No resume</span>'}
+              ${a.cover_letter ? `<button onclick="viewCL('${encodeURIComponent(a.cover_letter)}')" class="btn btn-secondary btn-sm">📝 Cover Letter</button>` : ''}
+
+              <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+                <label style="font-size:.8rem;font-weight:600;color:var(--text-muted)">Update Status:</label>
+                <select class="status-select" onchange="updateStatus(${a.application_id}, this.value, this)">
+                  <option value="applied"     ${a.status==='applied'     ? 'selected':''}>📝 Applied</option>
+                  <option value="shortlisted" ${a.status==='shortlisted' ? 'selected':''}>⭐ Shortlisted</option>
+                  <option value="rejected"    ${a.status==='rejected'    ? 'selected':''}>❌ Rejected</option>
+                  <option value="hired"       ${a.status==='hired'       ? 'selected':''}>🎉 Hired</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>`).join('');
+
+    } catch (err) {
+      showToast('Failed to load applicants: ' + err.message, 'error');
+    }
+  }
+
+  async function updateStatus(appId, newStatus, selectEl) {
+    selectEl.disabled = true;
+    try {
+      await ApplicationAPI.updateStatus(appId, newStatus);
+      showToast(`Status updated to "${newStatus}" — email sent to candidate`, 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      selectEl.disabled = false;
+    }
+  }
+
+  function viewCL(encoded) {
+    document.getElementById('clText').textContent = decodeURIComponent(encoded);
+    document.getElementById('clModal').classList.remove('hidden');
+  }
+</script>
+</body>
+</html>

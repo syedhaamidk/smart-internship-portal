@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Applications — Smart Internship Portal</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .app-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; margin-bottom: 14px;
+      box-shadow: var(--shadow); transition: all var(--t-med);
+      display: flex; gap: 16px; align-items: flex-start;
+    }
+    .app-card:hover { box-shadow: var(--shadow-md); }
+    .app-card-logo {
+      width: 52px; height: 52px; border-radius: var(--radius-sm);
+      background: var(--bg); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; font-weight: 700; color: var(--primary); flex-shrink: 0;
+    }
+    .app-card-body { flex: 1; min-width: 0; }
+    .app-card-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 2px; }
+    .app-card-meta  { font-size: .83rem; color: var(--text-muted); margin-bottom: 10px; }
+    .app-card-tags  { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .timeline {
+      display: flex; gap: 0; margin-top: 14px; padding-top: 14px;
+      border-top: 1px solid var(--border-light);
+    }
+    .timeline-step {
+      flex: 1; text-align: center; position: relative;
+      font-size: .72rem; color: var(--text-muted); font-weight: 500;
+    }
+    .timeline-step::before {
+      content: ''; display: block; width: 100%; height: 3px;
+      background: var(--border); margin-bottom: 6px; position: relative; z-index: 1;
+    }
+    .timeline-step.done::before   { background: var(--success); }
+    .timeline-step.active::before { background: var(--accent); }
+    .timeline-step.rejected::before { background: var(--danger); }
+    .timeline-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--border); margin: 0 auto 4px;
+      position: relative; z-index: 2; margin-top: -6px;
+    }
+    .timeline-step.done .timeline-dot   { background: var(--success); }
+    .timeline-step.active .timeline-dot { background: var(--accent); }
+    .timeline-step.rejected .timeline-dot { background: var(--danger); }
+    .filter-tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+    .filter-tab {
+      padding: 6px 16px; border-radius: 20px; border: 1.5px solid var(--border);
+      background: var(--bg-card); cursor: pointer; font-size: .83rem; font-weight: 500;
+      color: var(--text-muted); transition: all var(--t-fast);
+    }
+    .filter-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+
+    <div class="page-header">
+      <h2>My Applications</h2>
+      <p>Track all your internship applications in one place</p>
+    </div>
+
+    <!-- Filter tabs -->
+    <div class="filter-tabs" id="filterTabs">
+      <div class="filter-tab active" onclick="filterApps('all', this)">All</div>
+      <div class="filter-tab" onclick="filterApps('applied', this)">📝 Applied</div>
+      <div class="filter-tab" onclick="filterApps('shortlisted', this)">⭐ Shortlisted</div>
+      <div class="filter-tab" onclick="filterApps('hired', this)">🎉 Hired</div>
+      <div class="filter-tab" onclick="filterApps('rejected', this)">❌ Rejected</div>
+    </div>
+
+    <div id="appsList">
+      ${[1,2,3].map(() => `<div class="card" style="height:120px;margin-bottom:14px"><div class="skeleton" style="height:100%;border-radius:8px"></div></div>`).join('')}
+    </div>
+
+    <div class="empty-state hidden" id="emptyState">
+      <div class="empty-icon">📭</div>
+      <h4>No applications here</h4>
+      <p>Start applying for internships that match your skills</p>
+      <a href="internships.html" class="btn btn-primary" style="margin-top:16px">Browse Internships</a>
+    </div>
+
+  </main>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/ui.js"></script>
+<script>
+  if (!requireAuth(['student'])) throw new Error();
+  document.getElementById('sidebar').innerHTML = renderStudentSidebar('applications');
+  initMobileMenu();
+
+  let allApps = [];
+  let currentFilter = 'all';
+
+  const statusOrder = ['applied', 'shortlisted', 'hired'];
+
+  function getTimelineClass(step, appStatus) {
+    const stepIdx   = statusOrder.indexOf(step);
+    const statusIdx = statusOrder.indexOf(appStatus);
+    if (appStatus === 'rejected') return step === 'applied' ? 'done' : step === 'shortlisted' ? 'rejected' : '';
+    if (stepIdx < statusIdx) return 'done';
+    if (stepIdx === statusIdx) return 'active';
+    return '';
+  }
+
+  function renderApps(apps) {
+    if (!apps.length) {
+      document.getElementById('appsList').innerHTML = '';
+      document.getElementById('emptyState').classList.remove('hidden');
+      return;
+    }
+    document.getElementById('emptyState').classList.add('hidden');
+
+    document.getElementById('appsList').innerHTML = apps.map(a => `
+      <div class="app-card">
+        <div class="app-card-logo">${(a.company_name||'E')[0]}</div>
+        <div class="app-card-body">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+            <div>
+              <div class="app-card-title">${a.title}</div>
+              <div class="app-card-meta">
+                ${a.company_name || 'External'} · ${a.location || 'Remote'} · Applied ${timeAgo(a.applied_at)}
+              </div>
+            </div>
+            ${statusBadge(a.status)}
+          </div>
+
+          <div class="app-card-tags">
+            ${a.stipend_min || a.stipend_max ? `<span class="tag success">💰 ${formatStipend(a.stipend_min, a.stipend_max)}</span>` : ''}
+            ${a.duration_months ? `<span class="tag">⏱ ${a.duration_months}mo</span>` : ''}
+            ${a.type === 'external' ? '<span class="tag" style="background:#fef3c7;color:#92400e">🔗 External</span>' : ''}
+          </div>
+
+          <!-- Timeline -->
+          <div class="timeline">
+            ${['applied','shortlisted','hired'].map(step => `
+              <div class="timeline-step ${getTimelineClass(step, a.status)}">
+                <div class="timeline-dot"></div>
+                ${step.charAt(0).toUpperCase() + step.slice(1)}
+              </div>`).join('')}
+          </div>
+
+          <!-- Actions -->
+          <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+            <a href="internship-detail.html?id=${a.internship_id}" class="btn btn-secondary btn-sm">View Job</a>
+            ${a.status === 'applied' ? `<button onclick="withdrawApp(${a.id})" class="btn btn-sm" style="color:var(--danger);border:1px solid var(--danger);background:transparent">Withdraw</button>` : ''}
+            ${a.cover_letter ? `<button onclick="viewCL('${encodeURIComponent(a.cover_letter)}')" class="btn btn-secondary btn-sm">View Cover Letter</button>` : ''}
+          </div>
+        </div>
+      </div>`).join('');
+  }
+
+  function filterApps(status, el) {
+    currentFilter = status;
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    const filtered = status === 'all' ? allApps : allApps.filter(a => a.status === status);
+    renderApps(filtered);
+  }
+
+  async function withdrawApp(id) {
+    if (!confirm('Withdraw this application?')) return;
+    try {
+      await ApplicationAPI.withdraw(id);
+      showToast('Application withdrawn', 'success');
+      allApps = allApps.filter(a => a.id !== id);
+      renderApps(currentFilter === 'all' ? allApps : allApps.filter(a => a.status === currentFilter));
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  function viewCL(encoded) {
+    const text = decodeURIComponent(encoded);
+    const div = document.createElement('div');
+    div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px';
+    div.innerHTML = `<div style="background:#fff;border-radius:12px;padding:28px;max-width:520px;width:100%;max-height:80vh;overflow-y:auto">
+      <h3 style="margin-bottom:12px">Cover Letter</h3>
+      <p style="font-size:.9rem;white-space:pre-wrap;color:#374151">${text}</p>
+      <button onclick="this.closest('div[style]').remove()" class="btn btn-secondary" style="margin-top:16px">Close</button>
+    </div>`;
+    document.body.appendChild(div);
+  }
+
+  async function loadApps() {
+    try {
+      const res = await ApplicationAPI.getMine();
+      allApps = res.data || [];
+      renderApps(allApps);
+    } catch (err) {
+      showToast('Failed to load applications: ' + err.message, 'error');
+    }
+  }
+
+  loadApps();
+  initChatbot();
+</script>
+</body>
+</html>

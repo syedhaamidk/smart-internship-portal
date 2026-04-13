@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Company Dashboard — Smart Internship Portal</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .internship-row {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px; background: var(--bg);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      margin-bottom: 10px; transition: all var(--t-fast);
+    }
+    .internship-row:hover { border-color: var(--accent-light); background: var(--accent-glow); }
+    .internship-row-info { flex: 1; min-width: 0; }
+    .internship-row-title { font-weight: 600; font-size: .95rem; }
+    .internship-row-meta { font-size: .8rem; color: var(--text-muted); }
+    .internship-row-stats { display: flex; gap: 16px; flex-shrink: 0; }
+    .mini-stat { text-align: center; }
+    .mini-stat-val { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 1.2rem; }
+    .mini-stat-label { font-size: .7rem; color: var(--text-muted); }
+    .top-apps-table td:first-child { font-weight: 500; }
+    .bar-chart-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .bar-chart-label { width: 140px; font-size: .82rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+    .bar-chart-bar { flex: 1; background: var(--bg); border-radius: 4px; height: 22px; overflow: hidden; }
+    .bar-chart-fill { height: 100%; background: var(--accent); border-radius: 4px; display: flex; align-items: center; padding-left: 8px; color: #fff; font-size: .72rem; font-weight: 700; transition: width .8s ease; min-width: 20px; }
+    .applicant-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-light); }
+    .applicant-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent-glow); color: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .85rem; flex-shrink: 0; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+    @media (max-width: 1000px) { .two-col, .three-col { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <h2>Recruiter Dashboard</h2>
+        <p>Overview of your internship postings and applicants</p>
+      </div>
+      <a href="post-job.html" class="btn btn-primary">➕ Post Internship</a>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid">
+      ${[1,2,3,4].map(() => `<div class="stat-card"><div class="stat-icon"><div class="skeleton" style="width:40px;height:40px;border-radius:8px"></div></div><div><div class="skeleton" style="width:60px;height:32px;margin-bottom:4px"></div><div class="skeleton" style="width:100px;height:14px"></div></div></div>`).join('')}
+    </div>
+
+    <div class="two-col" style="margin-bottom:20px">
+
+      <!-- Applications per Job -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Applications per Internship</h3>
+        </div>
+        <div id="barChart">
+          <div class="skeleton" style="height:180px;border-radius:8px"></div>
+        </div>
+      </div>
+
+      <!-- Recent Applicants -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Recent Applicants</h3>
+          <a href="applicants.html" class="btn btn-secondary btn-sm">View All</a>
+        </div>
+        <div id="recentApplicants">
+          <div class="skeleton" style="height:150px;border-radius:8px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Internship Listings Summary -->
+    <div class="card">
+      <div class="card-header">
+        <h3>Your Internship Postings</h3>
+        <a href="internships.html" class="btn btn-secondary btn-sm">Manage All</a>
+      </div>
+      <div id="internshipsList">
+        <div class="skeleton" style="height:70px;border-radius:8px;margin-bottom:10px"></div>
+        <div class="skeleton" style="height:70px;border-radius:8px"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/ui.js"></script>
+<script>
+  if (!requireAuth(['company'])) throw new Error();
+  document.getElementById('sidebar').innerHTML = renderCompanySidebar('dashboard');
+  initMobileMenu();
+
+  async function loadDashboard() {
+    try {
+      const res = await CompanyAPI.getDashboard();
+      const d = res.data;
+
+      // Stats
+      document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card">
+          <div class="stat-icon">📋</div>
+          <div><div class="stat-value">${d.internshipCount}</div><div class="stat-label">Total Postings</div></div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">✅</div>
+          <div><div class="stat-value">${d.activeInternships}</div><div class="stat-label">Active Postings</div></div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon">👥</div>
+          <div><div class="stat-value">${d.totalApplicants}</div><div class="stat-label">Total Applicants</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div><div class="stat-value">${d.applicationsPerJob.length ? (d.totalApplicants / d.applicationsPerJob.length).toFixed(1) : 0}</div><div class="stat-label">Avg per Posting</div></div>
+        </div>`;
+
+      // Bar chart
+      const maxApps = Math.max(...d.applicationsPerJob.map(j => j.total_applications), 1);
+      document.getElementById('barChart').innerHTML = d.applicationsPerJob.length
+        ? d.applicationsPerJob.slice(0,6).map(j => `
+          <div class="bar-chart-row">
+            <div class="bar-chart-label" title="${j.title}">${j.title}</div>
+            <div class="bar-chart-bar">
+              <div class="bar-chart-fill" style="width:${Math.max((j.total_applications/maxApps)*100,5)}%">
+                ${j.total_applications}
+              </div>
+            </div>
+            <span style="font-size:.75rem;color:var(--text-muted);width:40px;text-align:right">
+              ⭐${j.shortlisted}
+            </span>
+          </div>`).join('')
+        : '<div class="empty-state"><div class="empty-icon">📊</div><p>Post internships to see analytics</p></div>';
+
+      // Recent applicants
+      document.getElementById('recentApplicants').innerHTML = d.recentApplicants.length
+        ? d.recentApplicants.map(a => `
+          <div class="applicant-row">
+            <div class="applicant-avatar">${getInitials(a.student_name)}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:.88rem">${a.student_name}</div>
+              <div style="font-size:.75rem;color:var(--text-muted)">${a.internship_title} · ${timeAgo(a.applied_at)}</div>
+            </div>
+            ${statusBadge(a.status)}
+          </div>`).join('')
+        : '<div class="empty-state"><div class="empty-icon">👥</div><p>No applicants yet</p></div>';
+
+      // Internship list
+      const jobsRes = await CompanyAPI.getInternships();
+      const jobs = jobsRes.data || [];
+      document.getElementById('internshipsList').innerHTML = jobs.length
+        ? jobs.map(j => `
+          <div class="internship-row">
+            <div class="internship-row-info">
+              <div class="internship-row-title">${j.title}</div>
+              <div class="internship-row-meta">
+                ${j.location || 'Remote'} · ${j.duration_months}mo · ${formatStipend(j.stipend_min, j.stipend_max)}
+                · Deadline: ${j.deadline ? new Date(j.deadline).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : 'Open'}
+              </div>
+            </div>
+            <div class="internship-row-stats">
+              <div class="mini-stat">
+                <div class="mini-stat-val">${j.application_count}</div>
+                <div class="mini-stat-label">Applied</div>
+              </div>
+            </div>
+            ${statusBadge(j.status)}
+            <div style="display:flex;gap:6px">
+              <a href="applicants.html?internshipId=${j.id}" class="btn btn-secondary btn-sm">Applicants</a>
+              <a href="edit-job.html?id=${j.id}" class="btn btn-outline btn-sm">Edit</a>
+            </div>
+          </div>`).join('')
+        : `<div class="empty-state"><div class="empty-icon">📋</div><p>No internships posted yet.</p><a href="post-job.html" class="btn btn-primary" style="margin-top:12px">Post First Internship</a></div>`;
+
+    } catch (err) {
+      showToast('Failed to load dashboard: ' + err.message, 'error');
+    }
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>

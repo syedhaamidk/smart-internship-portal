@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile — Smart Internship Portal</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .profile-hero {
+      background: linear-gradient(135deg, var(--primary), var(--primary-light));
+      border-radius: var(--radius-lg); padding: 28px 32px;
+      display: flex; align-items: center; gap: 24px; margin-bottom: 24px; color: #fff;
+    }
+    .profile-avatar-lg {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: var(--accent); border: 3px solid rgba(255,255,255,.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem; font-weight: 800; color: #fff; flex-shrink: 0;
+    }
+    .profile-hero-info h3 { color: #fff; margin-bottom: 4px; }
+    .profile-hero-info p  { color: rgba(255,255,255,.65); font-size: .9rem; }
+    .skill-toggle {
+      padding: 5px 12px; border-radius: 20px; border: 1.5px solid var(--border);
+      background: var(--bg-card); cursor: pointer; font-size: .82rem; font-weight: 500;
+      color: var(--text-muted); transition: all var(--t-fast); user-select: none; display: inline-block; margin: 3px;
+    }
+    .skill-toggle.selected { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    .resume-zone {
+      border: 2px dashed var(--border); border-radius: var(--radius-sm); padding: 32px;
+      text-align: center; cursor: pointer; transition: all var(--t-fast);
+    }
+    .resume-zone:hover, .resume-zone.drag { border-color: var(--accent); background: var(--accent-glow); }
+    .level-select {
+      padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px;
+      font-size: .72rem; background: var(--bg-card); color: var(--text); margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+
+    <div class="page-header">
+      <h2>My Profile</h2>
+      <p>Keep your profile updated to get better job matches and recruiter attention</p>
+    </div>
+
+    <!-- Profile Hero -->
+    <div class="profile-hero" id="profileHero">
+      <div class="profile-avatar-lg" id="heroAvatar">?</div>
+      <div class="profile-hero-info">
+        <h3 id="heroName">Loading...</h3>
+        <p id="heroMeta">—</p>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-list" style="margin-bottom:24px">
+      <button class="tab-btn active" onclick="switchTab('info')">Personal Info</button>
+      <button class="tab-btn" onclick="switchTab('skills')">Skills</button>
+      <button class="tab-btn" onclick="switchTab('resume')">Resume</button>
+    </div>
+
+    <!-- Personal Info Tab -->
+    <div id="tab-info" class="tab-panel active">
+      <div class="card" style="max-width:720px">
+        <h4 style="margin-bottom:20px">Personal Information</h4>
+        <form id="profileForm" onsubmit="saveProfile(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">First Name</label>
+              <input type="text" id="firstName" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Last Name</label>
+              <input type="text" id="lastName" class="form-control">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input type="tel" id="phone" class="form-control" placeholder="+91 98765 43210">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">College / University</label>
+              <input type="text" id="college" class="form-control" placeholder="IIT Bombay">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Degree</label>
+              <input type="text" id="degree" class="form-control" placeholder="B.Tech">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Branch / Specialization</label>
+              <input type="text" id="branch" class="form-control" placeholder="Computer Science">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Graduation Year</label>
+              <select id="graduationYear" class="form-control">
+                ${[2024,2025,2026,2027,2028].map(y => `<option>${y}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">CGPA</label>
+            <input type="number" id="cgpa" class="form-control" step="0.01" min="0" max="10" placeholder="8.5">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Bio / About Me</label>
+            <textarea id="bio" class="form-control" rows="3" placeholder="A brief intro about yourself, your interests and career goals..."></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">LinkedIn URL</label>
+              <input type="url" id="linkedinUrl" class="form-control" placeholder="https://linkedin.com/in/...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">GitHub URL</label>
+              <input type="url" id="githubUrl" class="form-control" placeholder="https://github.com/...">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" id="saveBtn">💾 Save Profile</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Skills Tab -->
+    <div id="tab-skills" class="tab-panel">
+      <div class="card" style="max-width:720px">
+        <h4 style="margin-bottom:8px">Your Skills</h4>
+        <p class="text-muted text-sm" style="margin-bottom:20px">Select all skills you have. These are used for AI-powered job matching.</p>
+        <div id="allSkills" style="line-height:2.2">
+          <div class="skeleton" style="height:80px;border-radius:8px"></div>
+        </div>
+        <button onclick="saveSkills()" class="btn btn-primary" style="margin-top:20px">💾 Save Skills</button>
+      </div>
+    </div>
+
+    <!-- Resume Tab -->
+    <div id="tab-resume" class="tab-panel">
+      <div class="card" style="max-width:720px">
+        <h4 style="margin-bottom:16px">Resume / CV</h4>
+
+        <div id="currentResume" class="hidden" style="padding:16px;background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:16px;display:flex;align-items:center;gap:12px">
+          <span style="font-size:2rem">📄</span>
+          <div style="flex:1">
+            <div style="font-weight:600">Current Resume</div>
+            <a id="resumeLink" href="#" target="_blank" style="font-size:.85rem">View / Download</a>
+          </div>
+        </div>
+
+        <div class="resume-zone" onclick="document.getElementById('resumeFile').click()"
+             ondragover="event.preventDefault();this.classList.add('drag')"
+             ondragleave="this.classList.remove('drag')"
+             ondrop="handleDrop(event)">
+          <div style="font-size:2.5rem;margin-bottom:8px">📤</div>
+          <div style="font-weight:600;margin-bottom:4px">Upload New Resume</div>
+          <div class="text-muted text-sm">PDF, DOC, DOCX · Max 5MB · Drag & drop or click</div>
+          <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" style="display:none" onchange="uploadResume(this.files[0])">
+        </div>
+
+        <div id="uploadProgress" class="hidden" style="margin-top:12px">
+          <div class="progress-bar"><div class="progress-fill" id="uploadBar" style="width:0%;transition:width .3s"></div></div>
+          <div class="text-muted text-sm" style="margin-top:4px">Uploading...</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/ui.js"></script>
+<script>
+  if (!requireAuth(['student'])) throw new Error();
+  document.getElementById('sidebar').innerHTML = renderStudentSidebar('profile');
+  initMobileMenu();
+
+  let allSkillsData = [];
+  let selectedSkillIds = new Set();
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach((b,i) => {
+      b.classList.toggle('active', ['info','skills','resume'][i] === tab);
+    });
+    ['info','skills','resume'].forEach(t => {
+      document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+    });
+  }
+
+  async function loadProfile() {
+    try {
+      const [profileRes, skillsRes] = await Promise.all([
+        StudentAPI.getProfile(),
+        InternshipAPI.getSkills()
+      ]);
+      const p = profileRes.data;
+      allSkillsData = skillsRes.data || [];
+
+      // Hero
+      const name = p.first_name ? `${p.first_name} ${p.last_name}` : 'Student';
+      document.getElementById('heroAvatar').textContent = getInitials(name);
+      document.getElementById('heroName').textContent = name;
+      document.getElementById('heroMeta').textContent =
+        [p.college, p.degree, p.branch, p.graduation_year ? `Class of ${p.graduation_year}` : ''].filter(Boolean).join(' · ') || 'Complete your profile';
+
+      // Form
+      const fields = {firstName:'first_name',lastName:'last_name',phone:'phone',college:'college',degree:'degree',branch:'branch',graduationYear:'graduation_year',cgpa:'cgpa',bio:'bio',linkedinUrl:'linkedin_url',githubUrl:'github_url'};
+      Object.entries(fields).forEach(([id, key]) => {
+        const el = document.getElementById(id);
+        if (el && p[key]) el.value = p[key];
+      });
+
+      // Resume
+      if (p.resume_url) {
+        const cr = document.getElementById('currentResume');
+        cr.style.display = 'flex'; cr.classList.remove('hidden');
+        document.getElementById('resumeLink').href = `http://localhost:5000${p.resume_url}`;
+      }
+
+      // Skills
+      const mySkillIds = new Set((p.skills || []).map(s => s.id));
+      selectedSkillIds = new Set(mySkillIds);
+
+      // Group by category
+      const grouped = {};
+      allSkillsData.forEach(s => {
+        if (!grouped[s.category]) grouped[s.category] = [];
+        grouped[s.category].push(s);
+      });
+
+      document.getElementById('allSkills').innerHTML = Object.entries(grouped).map(([cat, skills]) => `
+        <div style="margin-bottom:14px">
+          <div style="font-size:.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${cat}</div>
+          ${skills.map(s => `
+            <span class="skill-toggle ${mySkillIds.has(s.id) ? 'selected' : ''}"
+              onclick="toggleSkill(${s.id}, this)">${s.name}</span>
+          `).join('')}
+        </div>`).join('');
+
+    } catch (err) {
+      showToast('Failed to load profile: ' + err.message, 'error');
+    }
+  }
+
+  function toggleSkill(id, el) {
+    if (selectedSkillIds.has(id)) { selectedSkillIds.delete(id); el.classList.remove('selected'); }
+    else { selectedSkillIds.add(id); el.classList.add('selected'); }
+  }
+
+  async function saveProfile(e) {
+    e.preventDefault();
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="loading-spinner"></span> Saving...';
+    try {
+      await StudentAPI.updateProfile({
+        firstName: document.getElementById('firstName').value,
+        lastName:  document.getElementById('lastName').value,
+        phone:     document.getElementById('phone').value,
+        college:   document.getElementById('college').value,
+        degree:    document.getElementById('degree').value,
+        branch:    document.getElementById('branch').value,
+        graduationYear: document.getElementById('graduationYear').value,
+        cgpa:      document.getElementById('cgpa').value,
+        bio:       document.getElementById('bio').value,
+        linkedinUrl: document.getElementById('linkedinUrl').value,
+        githubUrl:   document.getElementById('githubUrl').value,
+      });
+      showToast('Profile saved! ✅', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      btn.disabled = false; btn.innerHTML = '💾 Save Profile';
+    }
+  }
+
+  async function saveSkills() {
+    const skills = Array.from(selectedSkillIds).map(id => ({ skillId: id, level: 'intermediate' }));
+    try {
+      await StudentAPI.updateSkills({ skills });
+      showToast(`${skills.length} skill(s) saved! ✅`, 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  async function uploadResume(file) {
+    if (!file) return;
+    document.getElementById('uploadProgress').classList.remove('hidden');
+    const bar = document.getElementById('uploadBar');
+    bar.style.width = '30%';
+    try {
+      const res = await StudentAPI.uploadResume(file);
+      bar.style.width = '100%';
+      document.getElementById('resumeLink').href = `http://localhost:5000${res.resumeUrl}`;
+      document.getElementById('currentResume').style.display = 'flex';
+      showToast('Resume uploaded! ✅', 'success');
+    } catch (err) {
+      showToast('Upload failed: ' + err.message, 'error');
+    } finally {
+      setTimeout(() => document.getElementById('uploadProgress').classList.add('hidden'), 1000);
+    }
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag');
+    const file = e.dataTransfer.files[0];
+    if (file) uploadResume(file);
+  }
+
+  loadProfile();
+  initChatbot();
+</script>
+</body>
+</html>
