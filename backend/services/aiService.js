@@ -1,17 +1,35 @@
 /**
  * AI Service
- * Uses Anthropic Claude API for:
+ * Uses Groq API for:
  * 1. Resume analysis — skills extraction, improvement suggestions
  * 2. Job recommendation explanations
  * 3. Career guidance chatbot
  * 4. Keyword matching score
+ *
+ * Model: llama-3.3-70b-versatile  (free tier, fast, great quality)
+ * SDK:   groq-sdk  (npm install groq-sdk)
+ * Free tier: ~14,400 requests/day — more than enough for a college demo
  */
-const Anthropic = require('@anthropic-ai/sdk');
-const router    = require('express').Router();
-const db        = require('../config/db');
+const Groq    = require('groq-sdk');
+const router  = require('express').Router();
+const db      = require('../config/db');
 const { authenticate, authorize } = require('../middleware/auth');
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const client = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
+
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+
+// ─── Helper: strip markdown fences and parse JSON ─────────────
+function parseJSON(raw, fallback = {}) {
+  const clean = raw.trim().replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
+  try {
+    return JSON.parse(clean);
+  } catch {
+    return fallback;
+  }
+}
 
 // ─── POST /ai/analyze-resume ──────────────────────────────────
 // Body: { resumeText: "..." }
@@ -22,15 +40,20 @@ router.post('/analyze-resume', authenticate, authorize('student'), async (req, r
   }
 
   try {
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    const response = await client.chat.completions.create({
+      model: GROQ_MODEL,
       max_tokens: 1500,
-      system: `You are a professional career counselor and resume expert specializing in tech internships for college students in India.
+      temperature: 0.3,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a professional career counselor and resume expert specializing in tech internships for college students in India.
 Analyze resumes and provide structured, actionable feedback.
-Always respond with valid JSON only, no preamble.`,
-      messages: [{
-        role: 'user',
-        content: `Analyze this resume and return a JSON object with these exact keys:
+IMPORTANT: Respond with valid JSON only. No preamble, no markdown fences, no extra text whatsoever. Start your response directly with { and end with }.`
+        },
+        {
+          role: 'user',
+          content: `Analyze this resume and return a JSON object with these exact keys:
 {
   "overallScore": <number 0-100>,
   "strengths": [<array of 3-5 strength strings>],
@@ -43,27 +66,20 @@ Always respond with valid JSON only, no preamble.`,
 
 Resume:
 ${resumeText.substring(0, 3000)}`
-      }]
+        }
+      ]
     });
 
-    const rawText = message.content[0].text.trim();
-    // Strip markdown code fences if present
-    const jsonStr = rawText.replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
-    let analysis;
-    try {
-      analysis = JSON.parse(jsonStr);
-    } catch {
-      // Fallback if Claude doesn't return pure JSON
-      analysis = {
-        overallScore: 70,
-        summary: rawText,
-        strengths: [],
-        improvements: [],
-        missingSkills: [],
-        extractedSkills: [],
-        keywordScore: 65
-      };
-    }
+    const rawText = response.choices[0].message.content;
+    const analysis = parseJSON(rawText, {
+      overallScore: 70,
+      summary: rawText,
+      strengths: [],
+      improvements: [],
+      missingSkills: [],
+      extractedSkills: [],
+      keywordScore: 65
+    });
 
     res.json({ success: true, data: analysis });
   } catch (err) {
@@ -94,13 +110,18 @@ router.post('/match-score', authenticate, authorize('student'), async (req, res)
     if (!internships.length) return res.status(404).json({ success: false, message: 'Internship not found' });
     const internship = internships[0];
 
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    const response = await client.chat.completions.create({
+      model: GROQ_MODEL,
       max_tokens: 800,
-      system: 'You are a recruitment AI. Respond with valid JSON only, no extra text.',
-      messages: [{
-        role: 'user',
-        content: `Score how well this resume matches this internship. Return JSON:
+      temperature: 0.2,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a recruitment AI. Respond with valid JSON only. No preamble, no markdown fences. Start directly with { and end with }.'
+        },
+        {
+          role: 'user',
+          content: `Score how well this resume matches this internship. Return JSON:
 {
   "matchScore": <number 0-100>,
   "matchedSkills": [<skills from resume that match>],
@@ -113,13 +134,12 @@ Required Skills: ${internship.required_skills}
 Description: ${internship.description.substring(0, 500)}
 
 Resume: ${resumeText.substring(0, 2000)}`
-      }]
+        }
+      ]
     });
 
-    const raw = message.content[0].text.trim().replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
-    let result;
-    try { result = JSON.parse(raw); }
-    catch { result = { matchScore: 0, recommendation: raw }; }
+    const raw = response.choices[0].message.content;
+    const result = parseJSON(raw, { matchScore: 0, recommendation: raw });
 
     res.json({ success: true, data: result });
   } catch (err) {
@@ -140,20 +160,23 @@ router.post('/chat', authenticate, async (req, res) => {
   try {
     const systemPrompt = `You are CareerBot, a friendly and knowledgeable career counselor for college students seeking internships in India.
 ${studentProfile ? `Student context: ${JSON.stringify(studentProfile)}` : ''}
-Provide practical, specific advice. Be concise (2-4 sentences per reply). 
+Provide practical, specific advice. Be concise (2-4 sentences per reply).
 Focus on: internship preparation, resume tips, interview advice, skill development, and career paths.
 Do not answer questions unrelated to career/internships.`;
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    const response = await client.chat.completions.create({
+      model: GROQ_MODEL,
       max_tokens: 500,
-      system: systemPrompt,
-      messages: messages.slice(-10) // Last 10 messages for context
+      temperature: 0.7,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages.slice(-10) // Last 10 messages for context
+      ]
     });
 
     res.json({
       success: true,
-      reply: response.content[0].text
+      reply: response.choices[0].message.content
     });
   } catch (err) {
     console.error('Chat error:', err);
@@ -167,13 +190,18 @@ router.post('/recommend-jobs', authenticate, authorize('student'), async (req, r
   const { skills, interests, cgpa } = req.body;
 
   try {
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    const response = await client.chat.completions.create({
+      model: GROQ_MODEL,
       max_tokens: 800,
-      system: 'You are a career advisor. Respond with valid JSON only.',
-      messages: [{
-        role: 'user',
-        content: `Based on a student's profile, suggest internship types and skills to develop.
+      temperature: 0.4,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a career advisor. Respond with valid JSON only. No preamble, no markdown fences. Start directly with { and end with }.'
+        },
+        {
+          role: 'user',
+          content: `Based on a student's profile, suggest internship types and skills to develop.
 
 Student skills: ${(skills || []).join(', ')}
 Interests: ${interests || 'not specified'}
@@ -186,13 +214,12 @@ Return JSON:
   "careerPaths": [<array of 3 potential career paths>],
   "tips": "<one actionable tip specific to this profile>"
 }`
-      }]
+        }
+      ]
     });
 
-    const raw = message.content[0].text.trim().replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
-    let result;
-    try { result = JSON.parse(raw); }
-    catch { result = { tips: raw }; }
+    const raw = response.choices[0].message.content;
+    const result = parseJSON(raw, { tips: raw });
 
     res.json({ success: true, data: result });
   } catch (err) {
